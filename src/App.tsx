@@ -1,5 +1,5 @@
 import React from 'react';
-import './App.css';
+import './style/App.css';
 import Languages from './Languages';
 import AlertMessages from './AlertMessages';
 import { IMyAlertParameter, MyAlert } from './MyAlert';
