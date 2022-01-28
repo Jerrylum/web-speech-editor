@@ -119,6 +119,22 @@ export default class App extends React.Component<{}, IAppState> {
   render(): React.ReactNode {
     const default_language = this.state.language;
 
+    const option_paper = (
+      <Paper elevation={2} sx={{ mt: 4, p: 4 }}>
+        <FormControl sx={{ m: 0, minWidth: 120 }}>
+          <InputLabel htmlFor="grouped-select">Language</InputLabel>
+          <Select defaultValue={default_language} id="grouped-select" label="Grouping" sx={{ minWidth: 200 }}>
+            {Languages.map((item, idx) => item.length > 2
+              ? [
+                <ListSubheader key={idx}>{item[0]}</ListSubheader>,
+                ...item.slice(1).map(subitem => <MenuItem key={subitem[0]} value={subitem[0]}>{'> ' + subitem[1]}</MenuItem>)
+              ]
+              : (<MenuItem key={item[1] as string} value={item[1]}>{item[0]}</MenuItem>))}
+          </Select>
+        </FormControl>
+      </Paper>
+    );
+
     return (
       <Container maxWidth="sm" sx={{ pt: 4 }}>
         <MyAlert data={this.state.alert_message} />
@@ -138,19 +154,7 @@ export default class App extends React.Component<{}, IAppState> {
               : null}
           </Stack>
         </Paper>
-        <Paper elevation={2} sx={{ mt: 4, p: 4 }}>
-          <FormControl sx={{ m: 0, minWidth: 120 }}>
-            <InputLabel htmlFor="grouped-select">Language</InputLabel>
-            <Select defaultValue={default_language} id="grouped-select" label="Grouping" sx={{ minWidth: 200 }}>
-              {Languages.map((item, idx) => item.length > 2
-                ? [
-                  <ListSubheader key={idx}>{item[0]}</ListSubheader>,
-                  ...item.slice(1).map(subitem => <MenuItem key={subitem[0]} value={subitem[0]}>{'> ' + subitem[1]}</MenuItem>)
-                ]
-                : (<MenuItem key={item[1] as string} value={item[1]}>{item[0]}</MenuItem>))}
-            </Select>
-          </FormControl>
-        </Paper>
+        {option_paper}
       </Container>
     );
   }

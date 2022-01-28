@@ -9,6 +9,6 @@ test('renders learn react link', () => {
 });
 
 
-test('renders learn react link', () => {
+test('testing', () => {
   expect(1).toBeTruthy();
 });
