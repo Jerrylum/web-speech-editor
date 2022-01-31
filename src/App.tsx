@@ -5,7 +5,6 @@ import AlertMessages from './AlertMessages';
 import { IMyAlertParameter, MyAlert } from './MyAlert';
 import { Button, Container, FormControl, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack, Typography } from '@mui/material';
 import { recognition_result_to_transcripts, ITranscript } from './Algorithm';
-import Transcript from './Transcript';
 
 interface IAppState {
   alert_message: IMyAlertParameter,
@@ -19,7 +18,6 @@ interface IAppState {
 }
 
 export default class App extends React.Component<{}, IAppState> {
-  editor: React.RefObject<HTMLDivElement>;
   recognition: SpeechRecognition | undefined;
 
   constructor(props: {}) {
@@ -34,7 +32,6 @@ export default class App extends React.Component<{}, IAppState> {
       final_transcripts: [],
       interim_transcripts: [],
     };
-    this.editor = React.createRef();
   }
 
   componentDidMount() {
@@ -46,50 +43,6 @@ export default class App extends React.Component<{}, IAppState> {
 
       return;
     }
-
-    this.editor.current?.addEventListener('DOMSubtreeModified', (e) => {
-      if (!(e instanceof MutationEvent)) return;
-
-      let mevent = e as MutationEvent;
-      
-      let mtarget = (mevent.target as HTMLElement).parentNode as HTMLElement;
-      if (mtarget.tagName == 'DIV') {
-        var ggg = mtarget.querySelector('div');
-        if (ggg)
-          console.log(ggg.childNodes.length, mtarget.tagName);
-      }
-
-      if (!mtarget.classList.contains('transcript')) return;
-
-      // {
-      //   let final_transcripts = this.state.final_transcripts;
-      //   let interim_transcripts = this.state.interim_transcripts;
-      //   let uuid = mtarget.id;
-      //   let selected = mtarget.innerText;
-      //   let options = new Set<string>();
-      //   let found = false;
-      //   for (let i = 0; i < final_transcripts.length; i++) {
-      //     if (final_transcripts[i].uuid === uuid) {
-      //       final_transcripts[i].selected = selected;
-      //       found = true;
-      //       break;
-      //     }
-      //   }
-      //   if (!found) {
-      //     for (let i = 0; i < interim_transcripts.length; i++) {
-      //       if (interim_transcripts[i].uuid === uuid) {
-      //         interim_transcripts[i].selected = selected;
-      //         found = true;
-      //         break;
-      //       }
-      //     }
-      //   }
-      // }
-
-      // mtarget.innerText = "ddd";
-
-      console.log('dddd');
-    });
 
     const recognition = this.recognition = new webkitSpeechRecognition();
     recognition.continuous = true;
@@ -136,27 +89,153 @@ export default class App extends React.Component<{}, IAppState> {
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      this.setState((prevState) => {
-        let final_transcripts = prevState.final_transcripts;
-        let interim_transcripts: ITranscript[] = [];
+      // let final_transcripts = prevState.final_transcripts;
+      // let interim_transcripts: ITranscript[] = [];
 
-        for (var i = event.resultIndex; i < event.results.length; ++i) {
-          let result = event.results[i];
-          let transcript = recognition_result_to_transcripts(result);
+      let editor = this.doGetEditor();
+      if (!editor) return;
 
-          if (result.isFinal) {
-            final_transcripts = final_transcripts.concat(transcript);
-            console.log(final_transcripts);
-          } else {
-            interim_transcripts = interim_transcripts.concat(transcript);
-          }
-        }
+      editor.querySelectorAll('.transcript.interim').forEach(e => e.remove());
 
-        return {final_transcripts, interim_transcripts};
-      });
+      let doc_transcripts = '';
+
+      for (var i = event.resultIndex; i < event.results.length; ++i) {
+        let result = event.results[i];
+        let transcript = recognition_result_to_transcripts(result);
+
+        if (result.isFinal) console.log(transcript);
+
+        transcript.forEach(t => doc_transcripts += `<span
+            id="${t.uuid}" 
+            class="transcript ${result.isFinal ? '' : 'interim'}"            
+            ${t.options.size > 1 ? `transcript-options="${Array.from(t.options).join(';')}"` : ''}
+            >${t.selected}</span>`);
+      }
+
+      this.doInsertHtml(doc_transcripts, editor);
     }
 
 
+    document.body.addEventListener('mouseover', (event: MouseEvent) => {
+      let menu = this.doGetTranscriptMenu();
+      if (!menu) return;
+
+      let target = event.target;
+      if (target && target instanceof HTMLElement) {
+        if (this.doMenuShow(target)) return;
+      }
+
+      if (menu.classList.contains('show') && !this.menu_dismiss_timeout) {
+        this.menu_dismiss_timeout = setTimeout(this.doMenuHide, 500);
+      }
+
+    });
+
+    document.body.addEventListener('click', (event: MouseEvent) => {
+      let menu = this.doGetTranscriptMenu();
+      if (!menu || !this.menu_focused_transcript) return;
+
+      let target = event.target;
+      if (target && target instanceof HTMLElement && menu.contains(target)) {
+        this.menu_focused_transcript.innerText = target.innerText;
+        this.doMenuHide();
+      }
+    });
+
+    document.body.addEventListener('DOMCharacterDataModified', (event: Event) => {
+      let e = event as MutationEvent;
+      let target = (e.target as Text).parentElement;
+
+      if (target?.matches('.transcript[transcript-options]')) {
+        target.removeAttribute('transcript-options');
+        this.doMenuHide();
+      }
+    });
+  }
+
+  menu_focused_transcript: HTMLElement | null = null;
+  menu_dismiss_timeout: NodeJS.Timeout | null = null;
+  doMenuShow = (target: HTMLElement) => {
+    let menu = this.doGetTranscriptMenu();
+    if (!menu) return;
+
+    if (this.menu_dismiss_timeout) clearTimeout(this.menu_dismiss_timeout);
+    this.menu_dismiss_timeout = null;
+
+    if (target.matches('.transcript[transcript-options]')) {
+      let pos = target.getBoundingClientRect();
+      let font_size = parseInt(document.defaultView?.getComputedStyle(menu).fontSize || '') || 0;
+
+      menu.style.left = `${pos.x - 15}px`;
+      menu.style.top = `${pos.y + font_size + 10}px`;
+      menu.innerHTML = '';
+      menu.classList.add('show');
+      this.menu_focused_transcript = target;
+
+      target.getAttribute('transcript-options')?.split(';').forEach(o => {
+        if (o == target.innerText) return;
+        let option = document.createElement('div');
+        // option.classList.add('transcript-option');
+        option.innerText = o;
+        menu?.appendChild(option);
+      });
+
+      return true;
+    } else if (menu == target || menu.contains(target)) {
+      return true;
+    }
+    return false;
+  }
+
+  doMenuHide = () => {
+    this.doGetTranscriptMenu()?.classList.remove('show');
+    this.menu_dismiss_timeout = null;
+    this.menu_focused_transcript = null;
+  }
+
+  doGetTranscriptMenu = (): (HTMLElement | null) => {
+    return document.querySelector('.transcript-menu');
+  }
+
+  doGetEditor = (): (HTMLElement | null) => {
+    return document.getElementById('ref-editor');
+  }
+
+  doInsertHtml = (html: string, inside: HTMLElement): void => {
+    let sel = window.getSelection && window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+
+    let range = sel.getRangeAt(0);
+
+    if (!(
+      (inside.contains(range.startContainer) || inside == range.startContainer) &&
+      (inside.contains(range.endContainer) || inside == range.endContainer))) return;
+
+    range.deleteContents();
+
+    // Range.createContextualFragment() would be useful here but is
+    // non-standard and not supported in all browsers (IE9, for one)
+    var el = document.createElement("div");
+    el.innerHTML = html;
+    var frag = document.createDocumentFragment(), node, lastNode;
+    while ((node = el.firstChild)) {
+      lastNode = frag.appendChild(node);
+    }
+    range.insertNode(frag);
+
+    // Preserve the selection
+    if (lastNode) {
+      range = range.cloneRange();
+      range.setStartAfter(lastNode);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    // Jerry: not supported
+    // } else if (document.selection && document.selection.type != "Control") {
+    //   // IE < 9
+    //   // document.selection.createRange().pasteHTML(html);
+    // }
   }
 
   doActionButton = () => {
@@ -169,6 +248,7 @@ export default class App extends React.Component<{}, IAppState> {
     }
 
     // TODO setup env
+    this.doGetEditor()?.focus();
 
     this.recognition.lang = this.state.language;
     this.recognition.start();
@@ -205,30 +285,28 @@ export default class App extends React.Component<{}, IAppState> {
     );
 
     return (
-      <Container maxWidth="sm" sx={{ pt: 4 }}>
-        <MyAlert data={this.state.alert_message} />
-        <Paper elevation={2} sx={{ mt: 4, p: 4 }}>
-          <div ref={this.editor}>
-            <Paper variant="outlined" className="Editor" sx={{ m: 0, p: 1.5, minHeight: '100px' }} contentEditable>
-              { this.state.final_transcripts.map(item => <Transcript data={item} is_final={true}/>) }
-              { this.state.interim_transcripts.map(item => <Transcript data={item} is_final={false}/>) }
+      <>
+        <Container maxWidth="sm" sx={{ pt: 4 }}>
+          <MyAlert data={this.state.alert_message} />
+          <Paper elevation={2} sx={{ mt: 4, p: 4 }}>
+            <Paper variant="outlined" className="Editor" id="ref-editor" sx={{ m: 0, p: 1.5, minHeight: '100px' }} contentEditable>
             </Paper>
-          </div>
-          
-          <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-            <Button variant="outlined">copy</Button>
-            {this.state.start_button.enabled
-              ? <Button
-                variant="outlined"
-                color={this.state.is_recognizing ? "success" : "primary"}
-                onClick={this.doActionButton}>
-                {this.state.is_recognizing ? 'end' : 'start'}
-              </Button>
-              : null}
-          </Stack>
-        </Paper>
-        {option_paper}
-      </Container>
+
+            <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+              <Button variant="outlined">copy</Button>
+              {this.state.start_button.enabled
+                ? <Button
+                  variant="outlined"
+                  color={this.state.is_recognizing ? "success" : "primary"}
+                  onClick={this.doActionButton}>
+                  {this.state.is_recognizing ? 'end' : 'start'}
+                </Button>
+                : null}
+            </Stack>
+          </Paper>
+          {option_paper}
+        </Container>
+      </>
     );
   }
 };
