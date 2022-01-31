@@ -36,3 +36,14 @@
     transform: rotate(360deg);
   }
 } */
+
+
+.Editor {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word;
+  white-space: normal !important;
+}
+
+.transcript.interim {
+  color: darkgray;
+}

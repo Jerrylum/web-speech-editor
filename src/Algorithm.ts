@@ -1,5 +1,10 @@
 
-
+export function guid_generator(): string {
+    var S4 = function () {
+        return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+    };
+    return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
+}
 
 export function diff_algorithm(raw_input: string[], split_eng_word = true) {
     if (raw_input.length == 0) return [];
@@ -79,5 +84,33 @@ export function diff_algorithm(raw_input: string[], split_eng_word = true) {
         rtn.push([buf[0]]);
     else
         rtn.push(buf);
+    return rtn;
+}
+
+export interface ITranscript {
+    uuid: string,
+    selected: string;
+    options: Set<string>;
+}
+
+
+export function recognition_result_to_transcripts(result: SpeechRecognitionResult): ITranscript[] {
+    let raw_input: string[] = [];
+    for (let i = 0; i < result.length; i++) {
+        raw_input.push(result[i].transcript);
+    }
+
+    let diff = diff_algorithm(raw_input);
+    let rtn: ITranscript[] = [];
+
+    for (let section of diff) {
+        let selected = section[0];
+        let options = new Set<string>();
+        for (let i = 0; i < section.length; i++) {
+            options.add(section[i]);
+        }
+        rtn.push({ uuid: guid_generator(), selected, options });
+    }
+
     return rtn;
 }

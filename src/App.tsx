@@ -4,6 +4,8 @@ import Languages from './Languages';
 import AlertMessages from './AlertMessages';
 import { IMyAlertParameter, MyAlert } from './MyAlert';
 import { Button, Container, FormControl, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack, Typography } from '@mui/material';
+import { recognition_result_to_transcripts, ITranscript } from './Algorithm';
+import Transcript from './Transcript';
 
 interface IAppState {
   alert_message: IMyAlertParameter,
@@ -12,9 +14,12 @@ interface IAppState {
   ignore_onend_event: boolean,
   start_timestamp: number,
   language: string,
+  final_transcripts: ITranscript[],
+  interim_transcripts: ITranscript[]
 }
 
 export default class App extends React.Component<{}, IAppState> {
+  editor: React.RefObject<HTMLDivElement>;
   recognition: SpeechRecognition | undefined;
 
   constructor(props: {}) {
@@ -25,8 +30,11 @@ export default class App extends React.Component<{}, IAppState> {
       is_recognizing: false,
       ignore_onend_event: false,
       start_timestamp: 0,
-      language: 'yue-Hant-HK'
+      language: 'yue-Hant-HK',
+      final_transcripts: [],
+      interim_transcripts: [],
     };
+    this.editor = React.createRef();
   }
 
   componentDidMount() {
@@ -38,6 +46,50 @@ export default class App extends React.Component<{}, IAppState> {
 
       return;
     }
+
+    this.editor.current?.addEventListener('DOMSubtreeModified', (e) => {
+      if (!(e instanceof MutationEvent)) return;
+
+      let mevent = e as MutationEvent;
+      
+      let mtarget = (mevent.target as HTMLElement).parentNode as HTMLElement;
+      if (mtarget.tagName == 'DIV') {
+        var ggg = mtarget.querySelector('div');
+        if (ggg)
+          console.log(ggg.childNodes.length, mtarget.tagName);
+      }
+
+      if (!mtarget.classList.contains('transcript')) return;
+
+      // {
+      //   let final_transcripts = this.state.final_transcripts;
+      //   let interim_transcripts = this.state.interim_transcripts;
+      //   let uuid = mtarget.id;
+      //   let selected = mtarget.innerText;
+      //   let options = new Set<string>();
+      //   let found = false;
+      //   for (let i = 0; i < final_transcripts.length; i++) {
+      //     if (final_transcripts[i].uuid === uuid) {
+      //       final_transcripts[i].selected = selected;
+      //       found = true;
+      //       break;
+      //     }
+      //   }
+      //   if (!found) {
+      //     for (let i = 0; i < interim_transcripts.length; i++) {
+      //       if (interim_transcripts[i].uuid === uuid) {
+      //         interim_transcripts[i].selected = selected;
+      //         found = true;
+      //         break;
+      //       }
+      //     }
+      //   }
+      // }
+
+      // mtarget.innerText = "ddd";
+
+      console.log('dddd');
+    });
 
     const recognition = this.recognition = new webkitSpeechRecognition();
     recognition.continuous = true;
@@ -84,8 +136,25 @@ export default class App extends React.Component<{}, IAppState> {
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      this.setState((prevState) => {
+        let final_transcripts = prevState.final_transcripts;
+        let interim_transcripts: ITranscript[] = [];
 
-    };
+        for (var i = event.resultIndex; i < event.results.length; ++i) {
+          let result = event.results[i];
+          let transcript = recognition_result_to_transcripts(result);
+
+          if (result.isFinal) {
+            final_transcripts = final_transcripts.concat(transcript);
+            console.log(final_transcripts);
+          } else {
+            interim_transcripts = interim_transcripts.concat(transcript);
+          }
+        }
+
+        return {final_transcripts, interim_transcripts};
+      });
+    }
 
 
   }
@@ -139,9 +208,13 @@ export default class App extends React.Component<{}, IAppState> {
       <Container maxWidth="sm" sx={{ pt: 4 }}>
         <MyAlert data={this.state.alert_message} />
         <Paper elevation={2} sx={{ mt: 4, p: 4 }}>
-          <Paper variant="outlined" sx={{ m: 0, p: 1.5, whiteSpace: 'nowrap', minHeight: '100px' }} contentEditable>
-            Hi
-          </Paper>
+          <div ref={this.editor}>
+            <Paper variant="outlined" className="Editor" sx={{ m: 0, p: 1.5, minHeight: '100px' }} contentEditable>
+              { this.state.final_transcripts.map(item => <Transcript data={item} is_final={true}/>) }
+              { this.state.interim_transcripts.map(item => <Transcript data={item} is_final={false}/>) }
+            </Paper>
+          </div>
+          
           <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
             <Button variant="outlined">copy</Button>
             {this.state.start_button.enabled
