@@ -154,17 +154,13 @@ export default class App extends React.Component<{}, IAppState> {
           case 'ArrowLeft':
             let start = event.key === 'ArrowRight' ? range.endContainer : range.startContainer;
             let check: Node | null = start;
+            if (!editor.contains(check)) break;
+
             while (check && editor.contains(check)) {
               if (check instanceof HTMLElement &&
                 check.hasAttribute('transcript-options') &&
                 check != start) {
-                this.doMenuShow(check);
-                let range = new Range();
-                range.selectNodeContents(check);
-                sel.removeAllRanges();
-                sel.addRange(range);
-                event.preventDefault();
-                return;
+                break;
               }
 
               let check_it: ChildNode | null = (event.key == 'ArrowRight')
@@ -172,7 +168,20 @@ export default class App extends React.Component<{}, IAppState> {
                 : check.previousSibling;
               check = check_it != null ? check_it : check.parentElement;
             }
-            break;
+
+            if (!(check instanceof HTMLElement && check.hasAttribute('transcript-options'))) {
+              let all_with_options = editor.querySelectorAll('.transcript[transcript-options]');
+              if (all_with_options.length == 0) break;
+              check = event.key === 'ArrowRight' ? all_with_options[0] : all_with_options[all_with_options.length - 1];
+            }
+
+            this.doMenuShow(check as HTMLElement);
+            range = new Range();
+            range.selectNodeContents(check);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            event.preventDefault();
+            return;
           default:
             break;
         }
