@@ -94,6 +94,53 @@
   display: none !important;
 }
 
+.transcript-menu-padding {
+  background-color: red !important;
+  padding: 0 !important;
+  cursor: default !important;
+  display: none;
+}
+
+.transcript-menu.page-mode .transcript-menu-padding {
+  display: block !important;
+}
+
+.transcript-menu-padding:nth-child(9n+1) {
+  height: 0;
+}
+
+.transcript-menu-padding:nth-child(9n+2) {
+  height: calc(2.35rem * 8);
+}
+
+.transcript-menu-padding:nth-child(9n+3) {
+  height: calc(2.35rem * 7);
+}
+
+.transcript-menu-padding:nth-child(9n+4) {
+  height: calc(2.35rem * 6);
+}
+
+.transcript-menu-padding:nth-child(9n+5) {
+  height: calc(2.35rem * 5);
+}
+
+.transcript-menu-padding:nth-child(9n+6) {
+  height: calc(2.35rem * 4);
+}
+
+.transcript-menu-padding:nth-child(9n+7) {
+  height: calc(2.35rem * 3);
+}
+
+.transcript-menu-padding:nth-child(9n+8) {
+  height: calc(2.35rem * 2);
+}
+
+.transcript-menu-padding:nth-child(9n+9) {
+  height: calc(2.35rem * 1);
+}
+
 .transcript-menu > div {
   padding: 0.5em;
   height: 1.35rem;

@@ -116,7 +116,7 @@ export default class App extends React.Component<{}, IAppState> {
 
       if (menu.childNodes.length == 0) return;
 
-      // TODO
+      menu.classList.remove('page-mode');
       this.doMenuAssignHotkey();
     });
 
@@ -136,6 +136,28 @@ export default class App extends React.Component<{}, IAppState> {
 
     });
 
+    document.body.addEventListener('keydown', (event: KeyboardEvent) => {
+      let menu = this.doGetTranscriptMenu();
+      if (!menu) return;
+
+      if (this.menu_focused_transcript == null) return;
+
+      switch (event.key) {
+        case "PageDown":
+          menu.classList.add('page-mode');
+          break;
+        case "PageUp":
+          menu.classList.add('page-mode');
+          break;
+
+        default:
+          return;
+      }
+      event.preventDefault();
+      console.log(event);
+
+    });
+
     document.body.addEventListener('click', (event: MouseEvent) => {
       let menu = this.doGetTranscriptMenu();
       if (!menu || !this.menu_focused_transcript) return;
@@ -149,11 +171,13 @@ export default class App extends React.Component<{}, IAppState> {
           target.parentElement != null)
           target = target.parentElement;
 
+        if (!menu.contains(target) || menu == target) return;
+
         if (target.classList.contains('transcript-delete-option')) {
-          this.menu_focused_transcript.innerText = '';
+          this.doInsertText('', this.menu_focused_transcript);
         } else {
           let span = target.querySelector('span.content') as HTMLElement | null;
-          this.menu_focused_transcript.innerText = span?.innerText || '';
+          this.doInsertText(span?.innerText || '', this.menu_focused_transcript);
         }
         this.doMenuHide();
       }
@@ -163,8 +187,11 @@ export default class App extends React.Component<{}, IAppState> {
       let e = event as MutationEvent;
       let target = (e.target as Text).parentElement;
 
+      console.log(event);
+
       if (target?.matches('.transcript[transcript-options]')) {
-        target.removeAttribute('transcript-options');
+        if (e.newValue.includes(';') || !target.getAttribute('transcript-options')?.includes(e.newValue))
+          target.removeAttribute('transcript-options');
       }
       this.doMenuHide();
     });
@@ -181,7 +208,15 @@ export default class App extends React.Component<{}, IAppState> {
     if (this.menu_dismiss_timeout) clearTimeout(this.menu_dismiss_timeout);
     this.menu_dismiss_timeout = null;
 
-    if (target.matches('.transcript[transcript-options]')) {
+    if (this.menu_focused_transcript == target) {
+      // already showing the menu of this transcript
+      // no need to render the menu again
+      return true;
+    } else if (menu.contains(target)) {
+      // cursor is on the menu
+      // no need to render the menu again
+      return true;
+    } else if (target.matches('.transcript[transcript-options]')) {
       let pos = target.getBoundingClientRect();
       let font_size = parseInt(document.defaultView?.getComputedStyle(menu).fontSize || '') || 0;
 
@@ -206,11 +241,11 @@ export default class App extends React.Component<{}, IAppState> {
         }
         menu?.appendChild(option);
 
-        this.doMenuAssignHotkey();
       });
 
-      return true;
-    } else if (menu == target || menu.contains(target)) {
+      menu.innerHTML += `<div class="transcript-menu-padding"></div>`;
+
+      this.doMenuAssignHotkey();
       return true;
     }
     return false;
@@ -232,8 +267,10 @@ export default class App extends React.Component<{}, IAppState> {
     let height_of_element = (menu.childNodes[0] as HTMLElement).getBoundingClientRect().height;
     let index = Math.floor((scroll_top + height_of_element / 2) / height_of_element);
 
-    for (let i = 0; i < menu.childElementCount; i++) {
-      let node = menu.childNodes[i] as HTMLElement;
+    let all_options = menu.querySelectorAll('.transcript-option');
+    for (let i = 0; i < all_options.length; i++) {
+      let node = all_options[i] as HTMLElement;
+
       let hotkey_num = (node.querySelector('span.hotkey-number') as HTMLElement);
 
       if (i < index || i > index + 8)
@@ -256,6 +293,21 @@ export default class App extends React.Component<{}, IAppState> {
     return document.getElementById('ref-editor');
   }
 
+  doInsertText = (text: string, inside: HTMLElement) => {
+    let sel = window.getSelection && window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+
+    if (!inside.firstChild || !inside.lastChild) return;
+
+    let range = new Range();
+    range.selectNodeContents(inside);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+
+    document.execCommand('insertText', false, text);
+  }
+
   doInsertHtml = (html: string, inside: HTMLElement): void => {
     let sel = window.getSelection && window.getSelection();
     if (!sel || !sel.rangeCount) return;
@@ -263,8 +315,7 @@ export default class App extends React.Component<{}, IAppState> {
     let range = sel.getRangeAt(0);
 
     if (!(
-      (inside.contains(range.startContainer) || inside == range.startContainer) &&
-      (inside.contains(range.endContainer) || inside == range.endContainer))) return;
+      inside.contains(range.startContainer) && inside.contains(range.endContainer))) return;
 
     range.deleteContents();
 
