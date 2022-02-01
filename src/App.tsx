@@ -141,54 +141,132 @@ export default class App extends React.Component<{}, IAppState> {
       let menu = this.doGetTranscriptMenu();
       if (!menu) return;
 
-      if (this.menu_focused_transcript == null) return;
+      let sel = window.getSelection && window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      let range = sel.getRangeAt(0);
+
+      let editor = this.doGetEditor();
+      if (!editor) return;
+
+      if (event.ctrlKey) {
+        switch (event.key) {
+          case 'ArrowRight':
+          case 'ArrowLeft':
+            let start = event.key === 'ArrowRight' ? range.endContainer : range.startContainer;
+            let check: Node | null = start;
+            while (check && editor.contains(check)) {
+              if (check instanceof HTMLElement &&
+                check.hasAttribute('transcript-options') &&
+                check != start) {
+                this.doMenuShow(check);
+                let range = new Range();
+                range.selectNodeContents(check);
+                sel.removeAllRanges();
+                sel.addRange(range);
+                event.preventDefault();
+                return;
+              }
+
+              let check_it: ChildNode | null = (event.key == 'ArrowRight')
+                ? check.nextSibling
+                : check.previousSibling;
+              check = check_it != null ? check_it : check.parentElement;
+            }
+            break;
+          default:
+            break;
+        }
+      }
+
       if (event.altKey || event.ctrlKey || event.metaKey) return;
 
-      switch (event.key) {
-        case "PageDown":
-        case "PageUp":
-          let menu_client_height = menu.getBoundingClientRect().height;
-          let sum_of_element_height = 0;
-          menu.childNodes.forEach(e => sum_of_element_height += (e as HTMLElement).getBoundingClientRect().height);
-          let now_page = ~~(menu.scrollTop / menu_client_height);
-          let max_page = ~~(menu.querySelectorAll('.transcript-option').length / 9) + 1;
+      if (this.menu_focused_transcript != null) {
+        let menu_client_height = menu.getBoundingClientRect().height;
+        let option_count = menu.querySelectorAll('.transcript-option').length
+        let sum_of_element_height = 0;
+        menu.childNodes.forEach(e => sum_of_element_height += (e as HTMLElement).getBoundingClientRect().height);
+        let now_page = ~~(menu.scrollTop / menu_client_height);
+        let max_page = ~~(option_count / 9) + 1;
+        let selected = menu.querySelector('.selected') as HTMLElement;
 
-          if (max_page > 1)
-            menu.classList.add('page-mode');
+        if (max_page > 1)
+          menu.classList.add('page-mode');
 
+        switch (event.key) {
+          case "ArrowDown":
+          case "ArrowUp":
+            let idx = Array.prototype.indexOf.call(menu.childNodes, selected);
+            idx = event.key === "ArrowDown" ? idx + 1 : idx - 1;
+            idx %= option_count;
+            if (idx < 0) idx = option_count - 1;
 
-          console.log({ menu_client_height, sum_of_element_height, now_page, max_page });
+            let page = ~~(idx / 9);
+            menu.scrollTop = page * menu_client_height;
 
-          let next_page = (now_page + (event.key == 'PageDown' ? 1 : -1)) % max_page;
-          if (next_page < 0)
-            next_page = max_page - 1;
-          menu.scrollTop = next_page * menu_client_height;
-          break;
-        case "Escape":
-          this.doMenuHide();
-          break;
-        case "1":
-        case "2":
-        case "3":
-        case "4":
-        case "5":
-        case "6":
-        case "7":
-        case "8":
-        case "9":
-          let result = Array.from(menu.childNodes).find(e => {
-            let buf = ((e as HTMLElement).querySelector('span.hotkey-number') as HTMLElement | null);
-            return buf?.innerText == event.key;
-          });
+            selected.classList.remove('selected');
+            (menu.childNodes[idx] as HTMLElement).classList.add('selected');
+            break;
+          case " ":
+          case "PageDown":
+          case "PageUp":
+            let next_page = (now_page + (event.key == 'PageUp' ? -1 : 1)) % max_page;
+            if (next_page < 0) next_page = max_page - 1;
+            menu.scrollTop = next_page * menu_client_height;
 
-          if (result != null) {
-            this.doMenuItemSelect(result as HTMLElement);
-          }
-          break;
-        default:
-          return;
+            selected.classList.remove('selected');
+            (menu.childNodes[next_page * 9] as HTMLElement).classList.add('selected');
+            break;
+          case "Escape":
+            this.doMenuHide();
+            break;
+          case "Enter":
+            this.doMenuItemSelect(menu.querySelector('.selected') as HTMLElement);
+            break;
+          case "1":
+          case "2":
+          case "3":
+          case "4":
+          case "5":
+          case "6":
+          case "7":
+          case "8":
+          case "9":
+            let result = Array.from(menu.childNodes).find(e => {
+              let buf = ((e as HTMLElement).querySelector('span.hotkey-number') as HTMLElement | null);
+              return buf?.innerText == event.key;
+            });
+
+            if (result != null) {
+              this.doMenuItemSelect(result as HTMLElement);
+            }
+            break;
+          default:
+            return;
+        }
+      } else {
+        return;
       }
       event.preventDefault();
+    });
+
+    document.addEventListener('selectionchange', () => {
+      let menu = this.doGetTranscriptMenu();
+      if (!menu) return;
+
+      let sel = window.getSelection && window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      let range = sel.getRangeAt(0);
+
+      if (range.startContainer == range.endContainer && range.startOffset == range.endOffset) {
+        let check = range.startContainer.parentElement;
+        if (check && check instanceof HTMLElement && check.hasAttribute('transcript-options')) {
+          // caret is on transcript
+          this.doMenuShow(check);
+        } else if (!menu.contains(check)) {
+          // if not in menu
+          this.doMenuHide();
+        }
+      }
     });
 
     let capslock_on_timestamp = 0;
@@ -212,12 +290,13 @@ export default class App extends React.Component<{}, IAppState> {
       } else if (event.key == 'Escape') {
         if (this.state.is_recognizing) {
           event.preventDefault();
-          this.doStopRecognition();
         }
+        this.doStopRecognition();
       }
     });
 
     document.body.addEventListener('click', (event: MouseEvent) => {
+      console.log('wltf', this.menu_focused_transcript);
       let menu = this.doGetTranscriptMenu();
       if (!menu || !this.menu_focused_transcript) return;
 
@@ -293,6 +372,14 @@ export default class App extends React.Component<{}, IAppState> {
       menu.classList.remove('page-mode');
       this.menu_focused_transcript = target;
 
+      // render the menu
+      // show selected as the first the option
+      let first_option = document.createElement('div');
+      first_option.classList.add('transcript-option');
+      first_option.classList.add('selected');
+      first_option.innerHTML = `<span class="hotkey-number">1</span><span class="content">${target.innerText}</span>`;
+      menu.appendChild(first_option);
+
       target.getAttribute('transcript-options')?.split(';').forEach(o => {
         if (o == target.innerText)
           return;
@@ -322,10 +409,18 @@ export default class App extends React.Component<{}, IAppState> {
     this.doGetTranscriptMenuWrapper()?.classList.remove('show');
     this.menu_dismiss_timeout = null;
     this.menu_focused_transcript = null;
+    console.log('lmao');
   }
 
   doMenuItemSelect = (target: HTMLElement) => {
+    console.log(this.menu_focused_transcript);
     if (!this.menu_focused_transcript) return;
+
+
+
+    // remove blue underscore
+    // optional
+    this.menu_focused_transcript.removeAttribute('transcript-options');
 
     if (target.classList.contains('transcript-delete-option')) {
       this.doInsertText('', this.menu_focused_transcript);
