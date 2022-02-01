@@ -101,8 +101,8 @@ export default class App extends React.Component<{}, IAppState> {
         let transcript = recognition_result_to_transcripts(result);
 
         transcript.forEach(t => doc_transcripts += `<span
-            id="${t.uuid}" 
-            class="transcript ${result.isFinal ? '' : 'interim'}"            
+            id="${t.uuid}"
+            class="transcript ${result.isFinal ? '' : 'interim'}"
             ${t.options.size > 1 ? `transcript-options="${Array.from(t.options).sort().join(';')}"` : ''}
             >${t.selected}</span>`);
       }
@@ -142,6 +142,7 @@ export default class App extends React.Component<{}, IAppState> {
       if (!menu) return;
 
       if (this.menu_focused_transcript == null) return;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
 
       switch (event.key) {
         case "PageDown":
@@ -208,6 +209,11 @@ export default class App extends React.Component<{}, IAppState> {
 
         capslock_on_timestamp = event.timeStamp;
         this.doStopRecognition();
+      } else if (event.key == 'Escape') {
+        if (this.state.is_recognizing) {
+          event.preventDefault();
+          this.doStopRecognition();
+        }
       }
     });
 
