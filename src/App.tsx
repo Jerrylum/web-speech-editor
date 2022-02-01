@@ -111,13 +111,14 @@ export default class App extends React.Component<{}, IAppState> {
     }
 
     this.doGetTranscriptMenu()?.addEventListener("scroll", event => {
+      this.doMenuAssignHotkey();
+    });
+
+    this.doGetTranscriptMenu()?.addEventListener("mousewheel", event => {
       let menu = this.doGetTranscriptMenu();
       if (!menu) return;
 
-      if (menu.childNodes.length == 0) return;
-
       menu.classList.remove('page-mode');
-      this.doMenuAssignHotkey();
     });
 
 
@@ -144,18 +145,23 @@ export default class App extends React.Component<{}, IAppState> {
 
       switch (event.key) {
         case "PageDown":
-          menu.classList.add('page-mode');
-          break;
         case "PageUp":
-          menu.classList.add('page-mode');
-          break;
+          let menu_client_height = menu.getBoundingClientRect().height;
+          let sum_of_element_height = 0;
+          menu.childNodes.forEach(e => sum_of_element_height += (e as HTMLElement).getBoundingClientRect().height);
+          let now_page = ~~(menu.scrollTop / menu_client_height);
+          let max_page = Math.ceil(~~(sum_of_element_height) / ~~(menu_client_height));
 
+          if (max_page > 1)
+            menu.classList.add('page-mode');
+
+          let next_page = (now_page + (event.key == 'PageDown' ? 1 : -1)) % max_page;
+          menu.scrollTop = next_page * menu_client_height;
+          break;
         default:
           return;
       }
       event.preventDefault();
-      console.log(event);
-
     });
 
     document.body.addEventListener('click', (event: MouseEvent) => {
@@ -187,10 +193,11 @@ export default class App extends React.Component<{}, IAppState> {
       let e = event as MutationEvent;
       let target = (e.target as Text).parentElement;
 
-      console.log(event);
-
       if (target?.matches('.transcript[transcript-options]')) {
-        if (e.newValue.includes(';') || !target.getAttribute('transcript-options')?.includes(e.newValue))
+        if (
+          e.newValue.includes(';') ||
+          target.childElementCount > 1 ||
+          !target.getAttribute('transcript-options')?.split(';').includes(e.newValue))
           target.removeAttribute('transcript-options');
       }
       this.doMenuHide();
@@ -224,6 +231,7 @@ export default class App extends React.Component<{}, IAppState> {
       menu_wrapper.style.top = `${pos.y + font_size}px`;
       menu_wrapper.classList.add('show');
       menu.innerHTML = '';
+      menu.classList.remove('page-mode');
       this.menu_focused_transcript = target;
 
       target.getAttribute('transcript-options')?.split(';').forEach(o => {
