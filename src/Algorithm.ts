@@ -100,7 +100,7 @@ export function recognition_result_to_transcripts(result: SpeechRecognitionResul
         raw_input.push(result[i].transcript);
     }
 
-    let diff = diff_algorithm(raw_input);
+    let diff = diff_algorithm(raw_input, false);
     let rtn: ITranscript[] = [];
 
     for (let section of diff) {

@@ -89,9 +89,6 @@ export default class App extends React.Component<{}, IAppState> {
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      // let final_transcripts = prevState.final_transcripts;
-      // let interim_transcripts: ITranscript[] = [];
-
       let editor = this.doGetEditor();
       if (!editor) return;
 
@@ -103,17 +100,25 @@ export default class App extends React.Component<{}, IAppState> {
         let result = event.results[i];
         let transcript = recognition_result_to_transcripts(result);
 
-        if (result.isFinal) console.log(transcript);
-
         transcript.forEach(t => doc_transcripts += `<span
             id="${t.uuid}" 
             class="transcript ${result.isFinal ? '' : 'interim'}"            
-            ${t.options.size > 1 ? `transcript-options="${Array.from(t.options).join(';')}"` : ''}
+            ${t.options.size > 1 ? `transcript-options="${Array.from(t.options).sort().join(';')}"` : ''}
             >${t.selected}</span>`);
       }
 
       this.doInsertHtml(doc_transcripts, editor);
     }
+
+    this.doGetTranscriptMenu()?.addEventListener("scroll", event => {
+      let menu = this.doGetTranscriptMenu();
+      if (!menu) return;
+
+      if (menu.childNodes.length == 0) return;
+
+      // TODO
+      this.doMenuAssignHotkey();
+    });
 
 
     document.body.addEventListener('mouseover', (event: MouseEvent) => {
@@ -125,7 +130,7 @@ export default class App extends React.Component<{}, IAppState> {
         if (this.doMenuShow(target)) return;
       }
 
-      if (menu.classList.contains('show') && !this.menu_dismiss_timeout) {
+      if (this.menu_focused_transcript != null && !this.menu_dismiss_timeout) {
         this.menu_dismiss_timeout = setTimeout(this.doMenuHide, 500);
       }
 
@@ -135,9 +140,21 @@ export default class App extends React.Component<{}, IAppState> {
       let menu = this.doGetTranscriptMenu();
       if (!menu || !this.menu_focused_transcript) return;
 
-      let target = event.target;
-      if (target && target instanceof HTMLElement && menu.contains(target)) {
-        this.menu_focused_transcript.innerText = target.innerText;
+      let e_target = event.target;
+      if (e_target && e_target instanceof HTMLElement && menu.contains(e_target)) {
+        let target = event.target as HTMLElement;
+        while (
+          menu.contains(target) &&
+          !target.classList.contains('transcript-option') &&
+          target.parentElement != null)
+          target = target.parentElement;
+
+        if (target.classList.contains('transcript-delete-option')) {
+          this.menu_focused_transcript.innerText = '';
+        } else {
+          let span = target.querySelector('span.content') as HTMLElement | null;
+          this.menu_focused_transcript.innerText = span?.innerText || '';
+        }
         this.doMenuHide();
       }
     });
@@ -148,8 +165,8 @@ export default class App extends React.Component<{}, IAppState> {
 
       if (target?.matches('.transcript[transcript-options]')) {
         target.removeAttribute('transcript-options');
-        this.doMenuHide();
       }
+      this.doMenuHide();
     });
   }
 
@@ -159,6 +176,8 @@ export default class App extends React.Component<{}, IAppState> {
     let menu = this.doGetTranscriptMenu();
     if (!menu) return;
 
+    let menu_wrapper = this.doGetTranscriptMenuWrapper() as HTMLElement;
+
     if (this.menu_dismiss_timeout) clearTimeout(this.menu_dismiss_timeout);
     this.menu_dismiss_timeout = null;
 
@@ -166,18 +185,28 @@ export default class App extends React.Component<{}, IAppState> {
       let pos = target.getBoundingClientRect();
       let font_size = parseInt(document.defaultView?.getComputedStyle(menu).fontSize || '') || 0;
 
-      menu.style.left = `${pos.x - 15}px`;
-      menu.style.top = `${pos.y + font_size + 10}px`;
+      menu_wrapper.style.left = `${pos.x - 15}px`;
+      menu_wrapper.style.top = `${pos.y + font_size}px`;
+      menu_wrapper.classList.add('show');
       menu.innerHTML = '';
-      menu.classList.add('show');
       this.menu_focused_transcript = target;
 
       target.getAttribute('transcript-options')?.split(';').forEach(o => {
-        if (o == target.innerText) return;
+        if (o == target.innerText)
+          return;
+
         let option = document.createElement('div');
-        // option.classList.add('transcript-option');
-        option.innerText = o;
+        option.innerHTML = '<span class="hotkey-number">1</span>';
+        option.classList.add('transcript-option');
+        if (o == '') {
+          option.classList.add('transcript-delete-option');
+          option.innerHTML += '<font color="darkgrey">(delete)</font>';
+        } else {
+          option.innerHTML += `<span class="content">${o}</span>`;
+        }
         menu?.appendChild(option);
+
+        this.doMenuAssignHotkey();
       });
 
       return true;
@@ -188,9 +217,35 @@ export default class App extends React.Component<{}, IAppState> {
   }
 
   doMenuHide = () => {
-    this.doGetTranscriptMenu()?.classList.remove('show');
+    this.doGetTranscriptMenuWrapper()?.classList.remove('show');
     this.menu_dismiss_timeout = null;
     this.menu_focused_transcript = null;
+  }
+
+  doMenuAssignHotkey = () => {
+    let menu = this.doGetTranscriptMenu();
+    if (!menu) return;
+
+    // assume height of element is 30
+    // 0~15 -> 0, 15~45 -> 1
+    let scroll_top = menu.scrollTop + 1;
+    let height_of_element = (menu.childNodes[0] as HTMLElement).getBoundingClientRect().height;
+    let index = Math.floor((scroll_top + height_of_element / 2) / height_of_element);
+
+    for (let i = 0; i < menu.childElementCount; i++) {
+      let node = menu.childNodes[i] as HTMLElement;
+      let hotkey_num = (node.querySelector('span.hotkey-number') as HTMLElement);
+
+      if (i < index || i > index + 8)
+        hotkey_num.innerText = '';
+      else
+        hotkey_num.innerText = '' + (i - index + 1);
+    }
+
+  }
+
+  doGetTranscriptMenuWrapper = (): (HTMLElement | null) => {
+    return document.querySelector('.transcript-menu-wrapper');
   }
 
   doGetTranscriptMenu = (): (HTMLElement | null) => {
@@ -288,6 +343,7 @@ export default class App extends React.Component<{}, IAppState> {
       <>
         <Container maxWidth="sm" sx={{ pt: 4 }}>
           <MyAlert data={this.state.alert_message} />
+          {option_paper}
           <Paper elevation={2} sx={{ mt: 4, p: 4 }}>
             <Paper variant="outlined" className="Editor" id="ref-editor" sx={{ m: 0, p: 1.5, minHeight: '100px' }} contentEditable>
             </Paper>
@@ -304,7 +360,6 @@ export default class App extends React.Component<{}, IAppState> {
                 : null}
             </Stack>
           </Paper>
-          {option_paper}
         </Container>
       </>
     );

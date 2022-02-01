@@ -52,27 +52,58 @@
   margin-bottom: -3px;
 }
 
-
 /* Jerry: belongs to insert script */
-.transcript-menu {
+.transcript-menu-wrapper {
   position: fixed;
+  min-width: 8rem;
+  top: 0;
+  left: 0;
+  display: inline-block;
+}
+
+.transcript-menu {
   min-width: 8rem;
   background-color: white;
   border-radius: 3px;
   -webkit-box-shadow: rgba(0, 0, 0, 0.2) 0 0 10px 2px;
   -moz-box-shadow: rgba(0, 0, 0, 0.2) 0 0 10px 2px;
   box-shadow: rgba(0, 0, 0, 0.2) 0 0 10px 2px;
-  top: 0;
-  left: 0;
-  z-index: 1000;
+  margin-top: .7rem;
+  z-index: 10000;
+  max-height: calc(2.35rem * 9);
+  overflow-y: auto;
 }
 
-.transcript-menu:not(.show),.transcript-menu:empty {
+/* width */
+.transcript-menu::-webkit-scrollbar {
+  width: 0.1rem;
+}
+
+/* Track */
+.transcript-menu::-webkit-scrollbar-track {
+  /* box-shadow: inset 0 0 5px darkgrey; */
+  border-radius: 0;
+}
+
+/* Handle */
+.transcript-menu::-webkit-scrollbar-thumb {
+  background: darkgray;
+}
+
+.transcript-menu-wrapper:not(.show) {
   display: none !important;
 }
 
 .transcript-menu > div {
-  padding: .5em;
+  padding: 0.5em;
+  height: 1.35rem;
+}
+
+.transcript-menu > div > span.hotkey-number {
+  display: inline-block;
+  /* margin-right: 0.5rem; */
+  margin-left: 0.2rem;
+  width: 1rem;
 }
 
 .transcript-menu > div:hover {
