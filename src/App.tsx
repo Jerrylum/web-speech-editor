@@ -132,7 +132,7 @@ export default class App extends React.Component<{}, IAppState> {
       }
 
       if (this.menu_focused_transcript != null && !this.menu_dismiss_timeout) {
-        this.menu_dismiss_timeout = setTimeout(this.doMenuHide, 500);
+        this.menu_dismiss_timeout = setTimeout(this.doMenuHide, 300);
       }
 
     });
@@ -150,18 +150,65 @@ export default class App extends React.Component<{}, IAppState> {
           let sum_of_element_height = 0;
           menu.childNodes.forEach(e => sum_of_element_height += (e as HTMLElement).getBoundingClientRect().height);
           let now_page = ~~(menu.scrollTop / menu_client_height);
-          let max_page = Math.ceil(~~(sum_of_element_height) / ~~(menu_client_height));
+          let max_page = ~~(menu.querySelectorAll('.transcript-option').length / 9) + 1;
 
           if (max_page > 1)
             menu.classList.add('page-mode');
 
+
+          console.log({ menu_client_height, sum_of_element_height, now_page, max_page });
+
           let next_page = (now_page + (event.key == 'PageDown' ? 1 : -1)) % max_page;
+          if (next_page < 0)
+            next_page = max_page - 1;
           menu.scrollTop = next_page * menu_client_height;
+          break;
+        case "Escape":
+          this.doMenuHide();
+          break;
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+        case "7":
+        case "8":
+        case "9":
+          let result = Array.from(menu.childNodes).find(e => {
+            let buf = ((e as HTMLElement).querySelector('span.hotkey-number') as HTMLElement | null);
+            return buf?.innerText == event.key;
+          });
+
+          if (result != null) {
+            this.doMenuItemSelect(result as HTMLElement);
+          }
           break;
         default:
           return;
       }
       event.preventDefault();
+    });
+
+    let capslock_on_timestamp = 0;
+    document.body.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key == 'CapsLock') {
+        event.preventDefault();
+        if (this.state.is_recognizing) return;
+
+        capslock_on_timestamp = event.timeStamp;
+        this.doStartRecognition();
+      }
+    });
+
+    document.body.addEventListener('keyup', (event: KeyboardEvent) => {
+      if (event.key == 'CapsLock') {
+        event.preventDefault();
+        if (event.timeStamp - capslock_on_timestamp < 500) return;
+
+        capslock_on_timestamp = event.timeStamp;
+        this.doStopRecognition();
+      }
     });
 
     document.body.addEventListener('click', (event: MouseEvent) => {
@@ -179,13 +226,7 @@ export default class App extends React.Component<{}, IAppState> {
 
         if (!menu.contains(target) || menu == target) return;
 
-        if (target.classList.contains('transcript-delete-option')) {
-          this.doInsertText('', this.menu_focused_transcript);
-        } else {
-          let span = target.querySelector('span.content') as HTMLElement | null;
-          this.doInsertText(span?.innerText || '', this.menu_focused_transcript);
-        }
-        this.doMenuHide();
+        this.doMenuItemSelect(target);
       }
     });
 
@@ -210,6 +251,10 @@ export default class App extends React.Component<{}, IAppState> {
     let menu = this.doGetTranscriptMenu();
     if (!menu) return;
 
+    let sel = window.getSelection && window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    let range = sel.getRangeAt(0);
+
     let menu_wrapper = this.doGetTranscriptMenuWrapper() as HTMLElement;
 
     if (this.menu_dismiss_timeout) clearTimeout(this.menu_dismiss_timeout);
@@ -224,6 +269,14 @@ export default class App extends React.Component<{}, IAppState> {
       // no need to render the menu again
       return true;
     } else if (target.matches('.transcript[transcript-options]')) {
+      if (range.startContainer != range.endContainer &&
+        range.startContainer != target &&
+        this.doGetEditor()?.contains(range.startContainer)) {
+        // cursor is not on the target
+        // can not show the menu
+        return false;
+      }
+
       let pos = target.getBoundingClientRect();
       let font_size = parseInt(document.defaultView?.getComputedStyle(menu).fontSize || '') || 0;
 
@@ -263,6 +316,18 @@ export default class App extends React.Component<{}, IAppState> {
     this.doGetTranscriptMenuWrapper()?.classList.remove('show');
     this.menu_dismiss_timeout = null;
     this.menu_focused_transcript = null;
+  }
+
+  doMenuItemSelect = (target: HTMLElement) => {
+    if (!this.menu_focused_transcript) return;
+
+    if (target.classList.contains('transcript-delete-option')) {
+      this.doInsertText('', this.menu_focused_transcript);
+    } else {
+      let span = target.querySelector('span.content') as HTMLElement | null;
+      this.doInsertText(span?.innerText || '', this.menu_focused_transcript);
+    }
+    this.doMenuHide();
   }
 
   doMenuAssignHotkey = () => {
@@ -353,13 +418,18 @@ export default class App extends React.Component<{}, IAppState> {
   }
 
   doActionButton = () => {
-    // this.setState({ alert_message: AlertMessages.allow }); // testing
     if (!this.recognition) return;
 
     if (this.state.is_recognizing) {
-      this.recognition.stop();
+      this.doStopRecognition();
       return;
     }
+
+    this.doStartRecognition();
+  }
+
+  doStartRecognition = () => {
+    if (!this.recognition) return;
 
     // TODO setup env
     this.doGetEditor()?.focus();
@@ -372,6 +442,12 @@ export default class App extends React.Component<{}, IAppState> {
       start_timestamp: Date.now(),
       ignore_onend_event: false,
     });
+  }
+
+  doStopRecognition = () => {
+    if (!this.recognition) return;
+
+    this.recognition.stop();
   }
 
   doOnLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {

@@ -95,7 +95,7 @@
 }
 
 .transcript-menu-padding {
-  background-color: red !important;
+  background-color: transparent !important;
   padding: 0 !important;
   padding-top: 1px;
   cursor: default !important;
