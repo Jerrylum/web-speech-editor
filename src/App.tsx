@@ -659,7 +659,7 @@ export default class App extends React.Component<{}, IAppState> {
                 : (<MenuItem key={item[1] as string} value={item[1]}>{item[0]}</MenuItem>))}
             </Select>
           </FormControl>
-          <FormControlLabel control={<Checkbox defaultChecked onChange={this.doOnChineseModeChange} />} label="適當時使用中文標點符號" />
+          <FormControlLabel control={<Checkbox defaultChecked onChange={this.doOnChineseModeChange} />} label="適當使用中文標點符號" />
         </Stack>
       </Paper>
     );
