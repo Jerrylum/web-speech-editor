@@ -153,29 +153,27 @@ export default class App extends React.Component<{}, IAppState> {
           case 'ArrowRight':
           case 'ArrowLeft':
             let start = event.key === 'ArrowRight' ? range.endContainer : range.startContainer;
-            let check: Node | null = start;
-            if (!editor.contains(check)) break;
+            if (!editor.contains(start)) break;
 
-            while (check && editor.contains(check)) {
-              if (check instanceof HTMLElement &&
-                check.hasAttribute('transcript-options') &&
-                check != start) {
-                break;
-              }
-
-              let check_it: ChildNode | null = (event.key == 'ArrowRight')
-                ? check.nextSibling
-                : check.previousSibling;
-              check = check_it != null ? check_it : check.parentElement;
+            let start_node = start;
+            while (start_node.parentElement && !(start_node instanceof HTMLSpanElement)) {
+              start_node = start_node.parentElement;
             }
 
-            if (!(check instanceof HTMLElement && check.hasAttribute('transcript-options'))) {
-              let all_with_options = editor.querySelectorAll('.transcript[transcript-options]');
-              if (all_with_options.length == 0) break;
-              check = event.key === 'ArrowRight' ? all_with_options[0] : all_with_options[all_with_options.length - 1];
-            }
+            let start_elem = start_node as HTMLElement;
+            start_elem.setAttribute('transcript-caret-flag', 'set');
+            let all_with_options = editor.querySelectorAll('.transcript[transcript-options],[transcript-caret-flag]');
+            start_elem.removeAttribute('transcript-caret-flag');
 
-            this.doMenuShow(check as HTMLElement);
+            if (all_with_options.length <= 1) break;
+
+            let index = Array.prototype.indexOf.call(all_with_options, start_elem);
+            index += event.key === 'ArrowRight' ? 1 : -1;
+            index %= all_with_options.length;
+            if (index < 0) index += all_with_options.length;
+
+            let check = all_with_options[index] as HTMLElement;
+            this.doMenuShow(check);
             range = new Range();
             range.selectNodeContents(check);
             sel.removeAllRanges();
