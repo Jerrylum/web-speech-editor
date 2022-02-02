@@ -3,7 +3,7 @@ import './style/App.css';
 import Languages from './Languages';
 import AlertMessages from './AlertMessages';
 import { IMyAlertParameter, MyAlert } from './MyAlert';
-import { Button, Container, FormControl, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack, Typography } from '@mui/material';
+import { Button, Container, FormControl, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack } from '@mui/material';
 import { recognition_result_to_transcripts, ITranscript } from './Algorithm';
 
 interface IAppState {
@@ -216,7 +216,7 @@ export default class App extends React.Component<{}, IAppState> {
           case " ":
           case "PageDown":
           case "PageUp":
-            let next_page = (now_page + (event.key == 'PageUp' ? -1 : 1)) % max_page;
+            let next_page = (now_page + (event.key === 'PageUp' ? -1 : 1)) % max_page;
             if (next_page < 0) next_page = max_page - 1;
             menu.scrollTop = next_page * menu_client_height;
 
@@ -240,7 +240,7 @@ export default class App extends React.Component<{}, IAppState> {
           case "9":
             let result = Array.from(menu.childNodes).find(e => {
               let buf = ((e as HTMLElement).querySelector('span.hotkey-number') as HTMLElement | null);
-              return buf?.innerText == event.key;
+              return buf?.innerText === event.key;
             });
 
             if (result != null) {
@@ -264,7 +264,7 @@ export default class App extends React.Component<{}, IAppState> {
       if (!sel || !sel.rangeCount) return;
       let range = sel.getRangeAt(0);
 
-      if (range.startContainer == range.endContainer && range.startOffset == range.endOffset) {
+      if (range.startContainer === range.endContainer && range.startOffset === range.endOffset) {
         let check = range.startContainer.parentElement;
         if (check && check instanceof HTMLElement && check.hasAttribute('transcript-options')) {
           // caret is on transcript
@@ -278,7 +278,7 @@ export default class App extends React.Component<{}, IAppState> {
 
     let capslock_on_timestamp = 0;
     document.body.addEventListener('keydown', (event: KeyboardEvent) => {
-      if (event.key == 'CapsLock') {
+      if (event.key === 'CapsLock') {
         event.preventDefault();
         if (this.state.is_recognizing) return;
 
@@ -288,13 +288,13 @@ export default class App extends React.Component<{}, IAppState> {
     });
 
     document.body.addEventListener('keyup', (event: KeyboardEvent) => {
-      if (event.key == 'CapsLock') {
+      if (event.key === 'CapsLock') {
         event.preventDefault();
         if (event.timeStamp - capslock_on_timestamp < 500) return;
 
         capslock_on_timestamp = event.timeStamp;
         this.doStopRecognition();
-      } else if (event.key == 'Escape') {
+      } else if (event.key === 'Escape') {
         if (this.state.is_recognizing) {
           event.preventDefault();
         }
@@ -303,7 +303,6 @@ export default class App extends React.Component<{}, IAppState> {
     });
 
     document.body.addEventListener('click', (event: MouseEvent) => {
-      console.log('wltf', this.menu_focused_transcript);
       let menu = this.doGetTranscriptMenu();
       if (!menu || !this.menu_focused_transcript) return;
 
@@ -316,7 +315,7 @@ export default class App extends React.Component<{}, IAppState> {
           target.parentElement != null)
           target = target.parentElement;
 
-        if (!menu.contains(target) || menu == target) return;
+        if (!menu.contains(target) || menu === target) return;
 
         this.doMenuItemSelect(target);
       }
@@ -352,7 +351,7 @@ export default class App extends React.Component<{}, IAppState> {
     if (this.menu_dismiss_timeout) clearTimeout(this.menu_dismiss_timeout);
     this.menu_dismiss_timeout = null;
 
-    if (this.menu_focused_transcript == target) {
+    if (this.menu_focused_transcript === target) {
       // already showing the menu of this transcript
       // no need to render the menu again
       return true;
@@ -361,8 +360,8 @@ export default class App extends React.Component<{}, IAppState> {
       // no need to render the menu again
       return true;
     } else if (target.matches('.transcript[transcript-options]')) {
-      if (range.startContainer != range.endContainer &&
-        range.startContainer != target &&
+      if (range.startContainer !== range.endContainer &&
+        range.startContainer !== target &&
         this.doGetEditor()?.contains(range.startContainer)) {
         // cursor is not on the target
         // can not show the menu
@@ -388,13 +387,13 @@ export default class App extends React.Component<{}, IAppState> {
       menu.appendChild(first_option);
 
       target.getAttribute('transcript-options')?.split(';').forEach(o => {
-        if (o == target.innerText)
+        if (o === target.innerText)
           return;
 
         let option = document.createElement('div');
         option.innerHTML = '<span class="hotkey-number">1</span>';
         option.classList.add('transcript-option');
-        if (o == '') {
+        if (o === '') {
           option.classList.add('transcript-delete-option');
           option.innerHTML += '<font color="darkgrey">(delete)</font>';
         } else {
@@ -416,14 +415,10 @@ export default class App extends React.Component<{}, IAppState> {
     this.doGetTranscriptMenuWrapper()?.classList.remove('show');
     this.menu_dismiss_timeout = null;
     this.menu_focused_transcript = null;
-    console.log('lmao');
   }
 
   doMenuItemSelect = (target: HTMLElement) => {
-    console.log(this.menu_focused_transcript);
     if (!this.menu_focused_transcript) return;
-
-
 
     // remove blue underscore
     // optional
