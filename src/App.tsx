@@ -3,7 +3,7 @@ import './style/App.css';
 import Languages from './Languages';
 import AlertMessages from './AlertMessages';
 import { IMyAlertParameter, MyAlert } from './MyAlert';
-import { Button, Container, FormControl, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack } from '@mui/material';
+import { Button, Checkbox, Container, FormControl, FormControlLabel, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack } from '@mui/material';
 import { recognition_result_to_transcripts, ITranscript } from './Algorithm';
 
 interface IAppState {
@@ -13,6 +13,7 @@ interface IAppState {
   ignore_onend_event: boolean,
   start_timestamp: number,
   language: string,
+  chinese_mode: boolean,
   final_transcripts: ITranscript[],
   interim_transcripts: ITranscript[]
 }
@@ -29,6 +30,7 @@ export default class App extends React.Component<{}, IAppState> {
       ignore_onend_event: false,
       start_timestamp: 0,
       language: 'yue-Hant-HK',
+      chinese_mode: true,
       final_transcripts: [],
       interim_transcripts: [],
     };
@@ -274,6 +276,77 @@ export default class App extends React.Component<{}, IAppState> {
           this.doMenuHide();
         }
       }
+    });
+
+    document.body.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.metaKey || event.altKey) return;
+
+      switch (event.key) {
+        case "(":
+        case ")":
+        case "[":
+        case "]":
+        case ";":
+        case "'":
+        case ",":
+        case ".":
+        case "/":
+        case "<":
+        case ">":
+        case "?":
+        case ":":
+        case "\"":
+        case "{":
+        case "}":
+          let use_chinese_symbol = false;
+
+          if (!this.state.chinese_mode) {
+            use_chinese_symbol = event.ctrlKey;
+          } else {
+            if (event.ctrlKey) {              
+              use_chinese_symbol = false;
+              document.execCommand('insertText', false, event.key);
+              break;
+            } else {
+              let sel = window.getSelection && window.getSelection();
+              if (!sel || !sel.rangeCount) return;
+              let range = sel.getRangeAt(0);
+
+              // check if chars between the symbol has chinese
+              use_chinese_symbol = [
+                (range.startContainer.textContent || [])[range.startOffset - 1],
+                (range.endContainer.textContent || [])[range.endOffset]
+              ].some(c => /[\p{Script=Han}|（|）|「|」|；|、|，|。|／|…|【|】|《|》|？|：|＂|｛|｝|．]/u.test(c));
+            }
+          }
+
+          if (!use_chinese_symbol) return;
+
+          let chinese_symbol = {
+            "(": "（", // not in 速成
+            ")": "）", // not in 速成
+            "[": "「", // diff from 速成
+            "]": "」", // diff from 速成
+            ";": "；",
+            "'": "、",
+            ",": "，",
+            ".": "。",
+            "/": "／",
+            "<": "《",
+            ">": "》",
+            "?": "？",
+            ":": "：",
+            "\"": "＂",
+            "{": "｛",
+            "}": "｝"
+          }[event.key];
+
+          document.execCommand('insertText', false, chinese_symbol);
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
     });
 
     let capslock_on_timestamp = 0;
@@ -558,22 +631,32 @@ export default class App extends React.Component<{}, IAppState> {
       this.recognition.lang = event.target.value;
   }
 
+  doOnChineseModeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    this.setState({
+      chinese_mode: event.target.checked,
+    });
+  }
+
   render(): React.ReactNode {
     const default_language = this.state.language;
 
     const option_paper = (
       <Paper elevation={2} sx={{ mt: 4, p: 4 }}>
-        <FormControl sx={{ m: 0, minWidth: 120 }}>
-          <InputLabel htmlFor="grouped-select">Language</InputLabel>
-          <Select defaultValue={default_language} id="grouped-select" label="Grouping" sx={{ minWidth: 200 }}>
-            {Languages.map((item, idx) => item.length > 2
-              ? [
-                <ListSubheader key={idx}>{item[0]}</ListSubheader>,
-                ...item.slice(1).map(subitem => <MenuItem key={subitem[0]} value={subitem[0]}>{'> ' + subitem[1]}</MenuItem>)
-              ]
-              : (<MenuItem key={item[1] as string} value={item[1]}>{item[0]}</MenuItem>))}
-          </Select>
-        </FormControl>
+        <Stack direction="row" spacing={2} justifyContent="start" >
+
+          <FormControl sx={{ m: 0, minWidth: 120 }}>
+            <InputLabel htmlFor="grouped-select">選擇語系</InputLabel>
+            <Select defaultValue={default_language} id="grouped-select" label="Grouping" sx={{ minWidth: 200 }}>
+              {Languages.map((item, idx) => item.length > 2
+                ? [
+                  <ListSubheader key={idx}>{item[0]}</ListSubheader>,
+                  ...item.slice(1).map(subitem => <MenuItem key={subitem[0]} value={subitem[0]}>{'> ' + subitem[1]}</MenuItem>)
+                ]
+                : (<MenuItem key={item[1] as string} value={item[1]}>{item[0]}</MenuItem>))}
+            </Select>
+          </FormControl>
+          <FormControlLabel control={<Checkbox defaultChecked onChange={this.doOnChineseModeChange} />} label="適當時使用中文標點符號"/>
+        </Stack>
       </Paper>
     );
 
@@ -587,13 +670,13 @@ export default class App extends React.Component<{}, IAppState> {
             </Paper>
 
             <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-              <Button variant="outlined">copy</Button>
+              <Button variant="outlined">複製</Button>
               {this.state.start_button.enabled
                 ? <Button
                   variant="outlined"
                   color={this.state.is_recognizing ? "success" : "primary"}
                   onClick={this.doActionButton}>
-                  {this.state.is_recognizing ? 'end' : 'start'}
+                  {this.state.is_recognizing ? '按下結束' : '按下開始'}
                 </Button>
                 : null}
             </Stack>

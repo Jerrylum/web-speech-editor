@@ -25,7 +25,7 @@
 }
 
 .App-link {
-  color: #61dafb;
+  color: #00b0e0;
 }
 
 @keyframes App-logo-spin {
@@ -48,7 +48,7 @@
 }
 
 .transcript[transcript-options] {
-  border-bottom: 3px solid #61dafb;
+  border-bottom: 3px solid #00b0e0;
   margin-bottom: -3px;
   position: relative;
 }
@@ -169,14 +169,14 @@
 }
 
 .transcript-menu > div:hover {
-  /* background-color: #61dafb; */
+  /* background-color: #00b0e0; */
   /* color: white; */
   background: #f5f5f5;
   cursor: pointer;
 }
 
 .transcript-menu > div.selected {
-  background: #61dafb;
+  background: #00b0e0;
 }
 
 .transcript-menu > div:first-child {
