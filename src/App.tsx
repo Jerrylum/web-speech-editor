@@ -615,6 +615,21 @@ export default class App extends React.Component<{}, IAppState> {
     this.recognition.stop();
   }
 
+  doCopyToClipboard = () => {
+    let [menu, sel, , editor] = this.doCheckEnv();
+    if (!menu || !sel || !editor) return;
+
+    let new_range = document.createRange();
+    new_range.selectNodeContents(editor);
+    sel.removeAllRanges();
+    sel.addRange(new_range);
+
+    // document.execCommand('copy');
+    var data = [new ClipboardItem({ "text/plain": new Blob([editor.innerText], { type: "text/plain" }) })];
+    navigator.clipboard.write(data);
+  }
+
+
   doOnLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (this.recognition)
       this.recognition.lang = event.target.value;
@@ -659,7 +674,7 @@ export default class App extends React.Component<{}, IAppState> {
             </Paper>
 
             <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-              <Button variant="outlined">複製</Button>
+              <Button variant="outlined" onClick={this.doCopyToClipboard}>複製</Button>
               {this.state.start_button.enabled
                 ? <Button
                   variant="outlined"
