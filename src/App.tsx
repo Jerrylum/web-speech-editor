@@ -4,7 +4,7 @@ import Languages from './Languages';
 import AlertMessages from './AlertMessages';
 import { IMyAlertParameter, MyAlert } from './MyAlert';
 import { Backdrop, Button, Checkbox, Container, FormControl, FormControlLabel, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack, Typography } from '@mui/material';
-import { recognition_result_to_transcripts, ITranscript, check_is_google_chrome } from './Algorithm';
+import { recognition_result_to_transcripts, ITranscript, check_is_google_chrome, get_html_element } from './Algorithm';
 
 interface IAppState {
   alert_message: IMyAlertParameter,
@@ -93,10 +93,12 @@ export default class App extends React.Component<{}, IAppState> {
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let editor = this.doGetEditor();
-      if (!editor) return;
+      let [menu, sel, range, editor] = this.doCheckEnv();
+      if (!menu || !sel || !range || !editor) return;
 
       editor.querySelectorAll('.transcript.interim').forEach(e => e.remove());
+      get_html_element(range.startContainer).removeAttribute('transcript-options');
+      get_html_element(range.endContainer).removeAttribute('transcript-options');
 
       let doc_transcripts = '';
 
@@ -119,17 +121,11 @@ export default class App extends React.Component<{}, IAppState> {
     });
 
     this.doGetTranscriptMenu()?.addEventListener("mousewheel", event => {
-      let menu = this.doGetTranscriptMenu();
-      if (!menu) return;
-
-      menu.classList.remove('page-mode');
+      this.doGetTranscriptMenu()?.classList.remove('page-mode');
     });
 
 
     document.body.addEventListener('mouseover', (event: MouseEvent) => {
-      let menu = this.doGetTranscriptMenu();
-      if (!menu) return;
-
       let target = event.target;
       if (target && target instanceof HTMLElement) {
         if (this.doMenuShow(target)) return;
@@ -138,19 +134,11 @@ export default class App extends React.Component<{}, IAppState> {
       if (this.menu_focused_transcript != null && !this.menu_dismiss_timeout) {
         this.menu_dismiss_timeout = setTimeout(this.doMenuHide, 300);
       }
-
     });
 
     document.body.addEventListener('keydown', (event: KeyboardEvent) => {
-      let menu = this.doGetTranscriptMenu();
-      if (!menu) return;
-
-      let sel = window.getSelection && window.getSelection();
-      if (!sel || !sel.rangeCount) return;
-      let range = sel.getRangeAt(0);
-
-      let editor = this.doGetEditor();
-      if (!editor) return;
+      let [menu, sel, range, editor] = this.doCheckEnv();
+      if (!menu || !sel || !range || !editor) return;
 
       if (event.ctrlKey) {
         switch (event.key) {
@@ -159,12 +147,7 @@ export default class App extends React.Component<{}, IAppState> {
             let start = event.key === 'ArrowRight' ? range.endContainer : range.startContainer;
             if (!editor.contains(start)) break;
 
-            let start_node = start;
-            while (start_node.parentElement && !(start_node instanceof HTMLSpanElement)) {
-              start_node = start_node.parentElement;
-            }
-
-            let start_elem = start_node as HTMLElement;
+            let start_elem = get_html_element(start);
             start_elem.setAttribute('transcript-caret-flag', 'set');
             let all_with_options = [...editor.querySelectorAll('.transcript[transcript-options],[transcript-caret-flag]')].filter(e => e.innerHTML);
             start_elem.removeAttribute('transcript-caret-flag');
@@ -261,16 +244,12 @@ export default class App extends React.Component<{}, IAppState> {
     });
 
     document.addEventListener('selectionchange', () => {
-      let menu = this.doGetTranscriptMenu();
-      if (!menu) return;
-
-      let sel = window.getSelection && window.getSelection();
-      if (!sel || !sel.rangeCount) return;
-      let range = sel.getRangeAt(0);
+      let [menu, sel, range, editor] = this.doCheckEnv();
+      if (!menu || !sel || !range || !editor) return;
 
       if (range.startContainer === range.endContainer && range.startOffset === range.endOffset) {
-        let check = range.startContainer.parentElement;
-        if (check && check instanceof HTMLElement && check.hasAttribute('transcript-options')) {
+        let check = get_html_element(range.startContainer);
+        if (check.hasAttribute('transcript-options')) {
           // caret is on transcript
           this.doMenuShow(check);
         } else if (!menu.contains(check)) {
@@ -414,12 +393,8 @@ export default class App extends React.Component<{}, IAppState> {
   menu_focused_transcript: HTMLElement | null = null;
   menu_dismiss_timeout: NodeJS.Timeout | null = null;
   doMenuShow = (target: HTMLElement) => {
-    let menu = this.doGetTranscriptMenu();
-    if (!menu) return;
-
-    let sel = window.getSelection && window.getSelection();
-    if (!sel || !sel.rangeCount) return;
-    let range = sel.getRangeAt(0);
+    let [menu, sel, range, editor] = this.doCheckEnv();
+    if (!menu || !sel || !range || !editor) return;
 
     let menu_wrapper = this.doGetTranscriptMenuWrapper() as HTMLElement;
 
@@ -542,6 +517,18 @@ export default class App extends React.Component<{}, IAppState> {
 
   doGetEditor = (): (HTMLElement | null) => {
     return document.getElementById('ref-editor');
+  }
+
+  doCheckEnv(): [HTMLElement | null, Selection | null, Range | null, HTMLElement | null] {
+    let menu = this.doGetTranscriptMenu();
+    let range: Range | null = null;
+
+    let sel = window.getSelection && window.getSelection();
+    if (sel && sel.rangeCount) range = sel.getRangeAt(0);
+    
+    let editor = this.doGetEditor();
+
+    return [menu, sel, range, editor];
   }
 
   doInsertText = (text: string, inside: HTMLElement) => {

@@ -6,6 +6,10 @@ export function guid_generator(): string {
     return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
 }
 
+export function get_html_element(me: ParentNode | Node | HTMLElement): HTMLElement {
+    return me instanceof HTMLElement ? me : me.parentElement as HTMLElement;
+}
+
 export function check_is_google_chrome(): boolean {
     // https://stackoverflow.com/questions/9847580/how-to-detect-safari-chrome-ie-firefox-and-opera-browser/9851769
 
