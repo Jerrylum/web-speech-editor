@@ -6,6 +6,40 @@ export function guid_generator(): string {
     return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
 }
 
+export function check_is_google_chrome(): boolean {
+    // https://stackoverflow.com/questions/9847580/how-to-detect-safari-chrome-ie-firefox-and-opera-browser/9851769
+
+    // Opera 8.0+
+    // @ts-ignore
+    var isOpera = (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+
+    // Firefox 1.0+
+    // @ts-ignore
+    var isFirefox = typeof InstallTrigger !== 'undefined';
+
+    // Safari 3.0+ "[object HTMLElementConstructor]" 
+    // @ts-ignore
+    var isSafari = /constructor/i.test(window.HTMLElement) || (function (p) { return p.toString() === "[object SafariRemoteNotification]"; })(!window['safari'] || (typeof safari !== 'undefined' && window['safari'].pushNotification));
+
+    // Internet Explorer 6-11
+    // @ts-ignore
+    var isIE = /*@cc_on!@*/false || !!document.documentMode;
+
+    // Edge 20+
+    // @ts-ignore
+    var isEdge = !isIE && !!window.StyleMedia;
+
+    // Chrome 1 - 79
+    // @ts-ignore
+    var isChrome = !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
+
+    // Edge (based on chromium) detection
+    // @ts-ignore
+    var isEdgeChromium = isChrome && (navigator.userAgent.indexOf("Edg") != -1);
+
+    return !isOpera && !isFirefox && !isSafari && !isIE && !isEdge && !isEdgeChromium;
+}
+
 export function diff_algorithm(raw_input: string[], split_eng_word = true) {
     if (raw_input.length == 0) return [];
 

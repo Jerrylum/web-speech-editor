@@ -1,44 +1,42 @@
-import { IMyAlertParameter } from './MyAlert';
-
 export default {
     "start": {
-        message: 'Click on the microphone icon and begin speaking.',
+        message: '點擊「按下開始」然後說話',
         severity: 'success'
     },
     "speak_now": {
-        message: 'Speak now.',
+        message: '請說話',
         severity: 'success'
     },
     "no_speech": {
-        message: 'No speech was detected. You may need to adjust your <a href="//support.google.com/chrome/answer/2693767" target="_blank">microphone settings</a>.',
+        message: '未檢測到語音。 您可能需要調整<a href="//support.google.com/chrome/answer/2693767" target="_blank">麥克風設置</a>。',
         severity: 'warning'
     },
     "no_microphone": {
-        message: 'No microphone was found. Ensure that a microphone is installed and that <a href="//support.google.com/chrome/answer/2693767" target="_blank">microphone settings</a> are configured correctly.',
+        message: '未找到麥克風。 確保已安裝麥克風並且正確配置<a href="//support.google.com/chrome/answer/2693767" target="_blank">麥克風設置。</a>',
         severity: 'warning'
     },
     "allow": {
-        message: 'Click the "Allow" button above to enable your microphone.',
+        message: '單擊上方的「允許」按鈕以啟用您的麥克風',
         severity: 'warning'
     },
     "denied": {
-        message: 'Permission to use microphone was denied.',
+        message: '使用麥克風的權限被拒絕',
         severity: 'warning'
     },
     "blocked": {
-        message: 'Permission to use microphone is blocked. To change, go to chrome://settings/content/microphone',
+        message: '使用麥克風的權限被阻止。要更改，請訪問 chrome://settings/content/microphone',
         severity: 'warning'
     },
     "upgrade": {
-        message: 'Web Speech API is not supported by this browser. It is only supported by <a href="//www.google.com/chrome">Chrome</a> version 25 or later on desktop and Android mobile.',
+        message: '此瀏覽器不支持 Web Speech API。 只有桌面和 Android 移動設備上的 <a href="//www.google.com/chrome">Chrome</a> 版本 25 或更高版本支持。',
         severity: 'warning'
     },
     "stop": {
-        message: 'Stop listening, click on the microphone icon to restart',
+        message: '停止收聽，點擊「按下開始」重啟',
         severity: 'success'
     },
     "copy": {
-        message: 'Content copy to clipboard successfully.',
+        message: '內容成功複製到剪貼板',
         severity: 'success'
     },
 }

@@ -3,8 +3,8 @@ import './style/App.css';
 import Languages from './Languages';
 import AlertMessages from './AlertMessages';
 import { IMyAlertParameter, MyAlert } from './MyAlert';
-import { Button, Checkbox, Container, FormControl, FormControlLabel, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack } from '@mui/material';
-import { recognition_result_to_transcripts, ITranscript } from './Algorithm';
+import { Backdrop, Button, Checkbox, Container, FormControl, FormControlLabel, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack, Typography } from '@mui/material';
+import { recognition_result_to_transcripts, ITranscript, check_is_google_chrome } from './Algorithm';
 
 interface IAppState {
   alert_message: IMyAlertParameter,
@@ -14,6 +14,7 @@ interface IAppState {
   start_timestamp: number,
   language: string,
   chinese_mode: boolean,
+  is_backdrop_open: boolean,
   final_transcripts: ITranscript[],
   interim_transcripts: ITranscript[]
 }
@@ -24,13 +25,14 @@ export default class App extends React.Component<{}, IAppState> {
   constructor(props: {}) {
     super(props);
     this.state = {
-      alert_message: { severity: 'success', message: 'Hello.' },
+      alert_message: AlertMessages.start,
       start_button: { label: 'Start', enabled: true },
       is_recognizing: false,
       ignore_onend_event: false,
       start_timestamp: 0,
       language: 'yue-Hant-HK',
       chinese_mode: true,
+      is_backdrop_open: !check_is_google_chrome(),
       final_transcripts: [],
       interim_transcripts: [],
     };
@@ -303,7 +305,7 @@ export default class App extends React.Component<{}, IAppState> {
           if (!this.state.chinese_mode) {
             use_chinese_symbol = event.ctrlKey;
           } else {
-            if (event.ctrlKey) {              
+            if (event.ctrlKey) {
               use_chinese_symbol = false;
               document.execCommand('insertText', false, event.key);
               break;
@@ -655,7 +657,7 @@ export default class App extends React.Component<{}, IAppState> {
                 : (<MenuItem key={item[1] as string} value={item[1]}>{item[0]}</MenuItem>))}
             </Select>
           </FormControl>
-          <FormControlLabel control={<Checkbox defaultChecked onChange={this.doOnChineseModeChange} />} label="適當時使用中文標點符號"/>
+          <FormControlLabel control={<Checkbox defaultChecked onChange={this.doOnChineseModeChange} />} label="適當時使用中文標點符號" />
         </Stack>
       </Paper>
     );
@@ -682,6 +684,19 @@ export default class App extends React.Component<{}, IAppState> {
             </Stack>
           </Paper>
         </Container>
+        <Backdrop
+          sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={this.state.is_backdrop_open}
+          onClick={() => this.setState({ is_backdrop_open: false })}
+        >
+          <Container>
+            <Typography variant="h2" component="h2" align="center">推介使用Google Chrome瀏覽器</Typography>
+            <Typography variant="h5" component="h5" align="center" marginTop="1rem">
+              您正在使用的的瀏覽器並不支援粵語語音識別功能<br />
+              按下任意地方關閉本提示繼續使用
+            </Typography>
+          </Container>
+        </Backdrop>
       </>
     );
   }
