@@ -162,7 +162,7 @@ export default class App extends React.Component<{}, IAppState> {
 
             let start_elem = start_node as HTMLElement;
             start_elem.setAttribute('transcript-caret-flag', 'set');
-            let all_with_options = editor.querySelectorAll('.transcript[transcript-options],[transcript-caret-flag]');
+            let all_with_options = [...editor.querySelectorAll('.transcript[transcript-options],[transcript-caret-flag]')].filter(e => e.innerHTML);
             start_elem.removeAttribute('transcript-caret-flag');
 
             if (all_with_options.length <= 1) break;
