@@ -405,8 +405,8 @@ export default class App extends React.Component<{}, IAppState> {
       // already showing the menu of this transcript
       // no need to render the menu again
       return true;
-    } else if (menu.contains(target)) {
-      // cursor is on the menu
+    } else if (menu_wrapper.contains(target)) {
+      // cursor is on the menu wrapper
       // no need to render the menu again
       return true;
     } else if (target.matches('.transcript[transcript-options]')) {
