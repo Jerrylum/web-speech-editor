@@ -2,6 +2,7 @@
   "name": "web-speech-editor",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://input.jerryio.com",
   "dependencies": {
     "@emotion/react": "^11.7.1",
     "@emotion/styled": "^11.6.0",
@@ -14,6 +15,7 @@
     "@types/node": "^16.11.21",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
+    "gh-pages": "^3.2.3",
     "react": "^17.0.2",
     "react-contenteditable": "^3.3.6",
     "react-dom": "^17.0.2",
